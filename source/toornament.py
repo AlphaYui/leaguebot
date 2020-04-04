@@ -9,13 +9,17 @@ from discord import Colour
 
 class Toornament:
 
-    def __init__(self, tokenFile, teamsFile, stagesFile, enableAPI = False):
+    def __init__(self, baseFolder, tokenFile, teamsFile, stagesFile, enableAPI = False):
+        self.baseFolder = baseFolder
+        if not self.baseFolder.endswith('/'):
+            self.baseFolder += '/'
+
         self.tokenFile = tokenFile
         self.teamsFile = teamsFile
         self.stagesFile = stagesFile
         self.enableAPI = enableAPI
 
-        # Reads ballchasing.com API token from token file
+        # Reads toornament API token from token file
         try:
             toornamentFile = open(tokenFile, 'r')
             toornamentInfo = [line.rstrip('\n') for line in toornamentFile]
@@ -31,7 +35,7 @@ class Toornament:
 
         # Loads team emote info
         try:
-            teamsFile = open(teamsFile, 'r')
+            teamsFile = open(self.baseFolder + teamsFile, 'r')
             teamInfos = [line.rstrip('\n') for line in teamsFile]
             self.teamInfos = []
 
@@ -56,7 +60,7 @@ class Toornament:
 
         # Loads list of available stages and settings for those
         try:
-            stagesFile = open(stagesFile, 'r')
+            stagesFile = open(self.baseFolder + stagesFile, 'r')
             stageInfos = [line.rstrip('\n') for line in stagesFile]
             self.stages = []
 
@@ -133,7 +137,7 @@ class Toornament:
     # Saves team list
     def saveTeamList(self):
         try:
-            file = open(self.teamsFile, 'w')
+            file = open(self.baseFolder + self.teamsFile, 'w')
             
             for teamInfo in self.teamInfos:
                 file.write(teamInfo.toCSV() + '\n')
@@ -174,7 +178,7 @@ class Toornament:
     # Saves stage list
     def saveStagesList(self):
         try:
-            file = open(self.stagesFile, 'w')
+            file = open(self.baseFolder + self.stagesFile, 'w')
 
             for stage in self.stages:
                 file.write(stage.toCSV() + '\n')
@@ -213,7 +217,7 @@ class Toornament:
                 return Ranking(stage)
         else:
             try:
-                csvFile = open(f'{stage.id}_{stage.groupID}.csv', 'r')
+                csvFile = open(f'{self.baseFolder}{stage.id}_{stage.groupID}.csv', 'r')
 
                 ranking = Ranking(stage)
                 for csvLine in csvFile:
@@ -283,7 +287,7 @@ class Toornament:
                 return []
         else:
             try:
-                csvFile = open(f'{stage.id}_{stage.groupID}_week{week}.csv', 'r')
+                csvFile = open(f'{self.baseFolder}{stage.id}_{stage.groupID}_week{week}.csv', 'r')
                 
                 for csvLine in csvFile:
                     match = Match()
@@ -362,7 +366,7 @@ class Toornament:
             teams += [nextTeam]
         
         try:
-            rankFile = open(f'{stage.id}_{stage.groupID}.csv', 'w')
+            rankFile = open(f'{self.baseFolder}{stage.id}_{stage.groupID}.csv', 'w')
 
             for team in teams:
                 rankFile.write(team.toCSV() + '\n')
@@ -448,7 +452,7 @@ class Toornament:
 
         # Writes all matches to CSV file
         try:
-            matchesFile = open(f'{stage.id}_{stage.groupID}_week{weekNumber}.csv', 'w')
+            matchesFile = open(f'{self.baseFolder}{stage.id}_{stage.groupID}_week{weekNumber}.csv', 'w')
 
             for match in matches:
                 matchesFile.write(match.toCSV() + '\n')
@@ -647,10 +651,10 @@ class Stage:
         # Converts colour hex string to RGB values
         self.colourStr = colour
         r = int(colour[:2], 16)
-        g = int(colour[2:3], 16)
+        g = int(colour[2:4], 16)
         b = int(colour[4:], 16)
         self.colour = Colour.from_rgb(r, g, b)
-    
+
     # Returns stage information as valid CSV-line
     def toCSV(self):
         return f'{self.name};{self.id};{self.groupID};{self.logoURL};{self.colourStr};{self.alias}'
