@@ -223,7 +223,10 @@ class Toornament:
                 for csvLine in csvFile:
                     team = Team()
                     team.fromCSV(csvLine)
-                    team.emote = self.getTeam(team.name).emote
+                    teamInfo = self.getTeam(team.name)
+                    team.emote = teamInfo.emote
+                    if not teamInfo.nickname == '':
+                        team.name = teamInfo.nickname
                     ranking.teams += [team]
 
                 csvFile.close()
@@ -292,8 +295,14 @@ class Toornament:
                 for csvLine in csvFile:
                     match = Match()
                     match.fromCSV(csvLine)
-                    match.homeTeamEmote = self.getTeam(match.homeTeamName).emote
-                    match.awayTeamEmote = self.getTeam(match.awayTeamName).emote
+                    homeTeamInfo = self.getTeam(match.homeTeamName)
+                    awayTeamInfo = self.getTeam(match.awayTeamName)
+                    match.homeTeamEmote = homeTeamInfo.emote
+                    match.awayTeamEmote = awayTeamInfo.emote
+                    if not homeTeamInfo.nickname == '':
+                        match.homeTeamName = homeTeamInfo.nickname
+                    if not awayTeamInfo.nickname == '':
+                        match.awayTeamName = awayTeamInfo.nickname
                     matches += [match]
 
                 csvFile.close()
@@ -356,7 +365,7 @@ class Toornament:
             nextTeam.played = standingInfos[lineIndex+3]
             nextTeam.wins = standingInfos[lineIndex+4]
             nextTeam.losses = standingInfos[lineIndex+6]
-            forfeits = standingInfos[lineIndex+7]
+            nextTeam.forfeits = standingInfos[lineIndex+7]
             nextTeam.gamesWon = standingInfos[lineIndex+8]
             nextTeam.gamesLost = standingInfos[lineIndex+9]
             nextTeam.gameDifference = standingInfos[lineIndex+10]
@@ -591,7 +600,7 @@ class Ranking:
             if len(nameStr) < namePadding:
                 nameStr += ' ' * (namePadding - len(nameStr))
 
-            wlStr = str(team.wins) + '-' + str(team.losses)
+            wlStr = str(team.wins) + '-' + str(team.losses + team.forfeits)
             if len(wlStr) < wlPadding:
                 wlStr += ' ' * (wlPadding - len(wlStr))
 
