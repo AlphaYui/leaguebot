@@ -4,6 +4,7 @@ import json
 import re
 import datetime
 import math
+import io
 from time import sleep
 from discord import Colour
 
@@ -35,7 +36,7 @@ class Toornament:
 
         # Loads team emote info
         try:
-            teamsFile = open(self.baseFolder + teamsFile, 'r')
+            teamsFile = io.open(self.baseFolder + teamsFile, 'r', encoding = 'utf-8')
             teamInfos = [line.rstrip('\n') for line in teamsFile]
             self.teamInfos = []
 
@@ -60,7 +61,7 @@ class Toornament:
 
         # Loads list of available stages and settings for those
         try:
-            stagesFile = open(self.baseFolder + stagesFile, 'r')
+            stagesFile = io.open(self.baseFolder + stagesFile, 'r', encoding = 'utf-8')
             stageInfos = [line.rstrip('\n') for line in stagesFile]
             self.stages = []
 
@@ -86,6 +87,21 @@ class Toornament:
 
         # These headers need to be supplied with every API call for authorization
         self.headers = {'X-Api-Key': self.token}
+        self.lastCall = datetime.datetime.now()
+
+
+    # Waits until a certain cooldown since the last API call has passed to avoid overloading the endpoint
+    def cooldownAPI(self):
+
+        # Calculates remaining cooldown time (100ms in total)
+        cooldown = 0.2
+        timeSinceLastCall = datetime.datetime.now() - self.lastCall
+        remainingCooldown = cooldown - timeSinceLastCall.microseconds/1e+6
+
+        # Waits until the end of the cooldown time
+        if remainingCooldown > 0:
+            sleep(remainingCooldown)
+
         self.lastCall = datetime.datetime.now()
 
     # Returns information on the stage with the given name, alias or id
@@ -137,7 +153,7 @@ class Toornament:
     # Saves team list
     def saveTeamList(self):
         try:
-            file = open(self.baseFolder + self.teamsFile, 'w')
+            file = io.open(self.baseFolder + self.teamsFile, 'w', encoding = 'utf-8')
             
             for teamInfo in self.teamInfos:
                 file.write(teamInfo.toCSV() + '\n')
@@ -178,7 +194,7 @@ class Toornament:
     # Saves stage list
     def saveStagesList(self):
         try:
-            file = open(self.baseFolder + self.stagesFile, 'w')
+            file = io.open(self.baseFolder + self.stagesFile, 'w', 'utf-8')
 
             for stage in self.stages:
                 file.write(stage.toCSV() + '\n')
@@ -201,7 +217,10 @@ class Toornament:
     # Returns empty rankings in case of API error
     def getRanking(self, stage):
 
+        self.cooldownAPI()
+
         responseJSON = {}
+        ranking = Ranking(stage)
 
         # Either reads ranking info from API or existing CSV file
         if self.enableAPI:
@@ -209,17 +228,19 @@ class Toornament:
             if not stage.groupID == '':
                 requestURL += f'?group_ids={stage.groupID}'
 
-            response = requests.get(url = requestURL, headers = self.headers)
+            modifiedHeaders = self.headers
+            modifiedHeaders['Range'] = 'items=0-49'
+
+            response = requests.get(url = requestURL, headers = modifiedHeaders)
 
             if(response.status_code == 206):
                 responseJSON = response.json()
             else:
-                return Ranking(stage)
+                return ranking
         else:
             try:
                 csvFile = open(f'{self.baseFolder}{stage.id}_{stage.groupID}.csv', 'r')
 
-                ranking = Ranking(stage)
                 for csvLine in csvFile:
                     team = Team()
                     team.fromCSV(csvLine)
@@ -261,6 +282,12 @@ class Toornament:
             nextTeam.gamesLost = props['score_against']
             nextTeam.gameDifference = props['score_difference']
 
+            if nextTeam.points is None:
+                nextTeam.points = 0
+            
+            if nextTeam.rank is None:
+                nextTeam.rank = nextTeam.position
+
             ranking.teams += [nextTeam]
         
         # Sort team by toornament display order (based on ranking)
@@ -273,6 +300,8 @@ class Toornament:
     # Returns empty list for API errors
     def getMatches(self, stage, week):
 
+        self.cooldownAPI()
+
         responseJSON = {}
         matches = []
 
@@ -281,6 +310,9 @@ class Toornament:
             requestURL = f'https://api.toornament.com/viewer/v2/tournaments/{self.tournamentID}/matches?round_numbers={week}&stage_ids={stage.id}'
             if not stage.groupID == '':
                 requestURL += f'&group_ids={stage.groupID}'
+
+            modifiedHeaders = self.headers
+            modifiedHeaders['Range'] = 'matches=0-49'
 
             response = requests.get(url = requestURL, headers = self.headers)
 
@@ -481,14 +513,16 @@ class Week:
     # Returns a text containing all upcoming, unplayed fixtures including team emotes
     def getMatchesText(self):
 
+        if self.matches == []:
+            return 'None'
+
         # Gets list of upcoming matches sorted to match toornament ordering
         self.matches = sorted(self.matches, key = lambda match: match.number)
         
         # Adds all match string of pending games to the string
         msg = ''
         for match in self.matches:
-            if match.pending:
-                msg += match.toString() + '\n'
+            msg += match.toString() + '\n'
 
         return msg
 
@@ -508,7 +542,10 @@ class Match:
 
     # Converts match information to a string containing the team names and emotes
     def toString(self):
-        return self.homeTeamName + ' ' + self.homeTeamEmote + ' vs ' + self.awayTeamEmote + ' ' + self.awayTeamName
+        if self.pending:
+            return f"{self.homeTeamName} {self.homeTeamEmote} vs {self.awayTeamEmote} {self.awayTeamName}"
+        else:
+            return f"{self.homeTeamName} {self.homeTeamEmote} {self.homeScore}-{self.awayScore} {self.awayTeamEmote} {self.awayTeamName}"
     
     # Writes match details to CSV for serialization
     def toCSV(self):
