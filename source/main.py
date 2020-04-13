@@ -15,7 +15,7 @@ def main():
 	# - Add help command
 
 	# Initialized Toornament endpoint
-	toornament = Toornament('data', 'toornament.token', 'Teams.csv', 'Stages.csv', enableAPI = False)
+	toornament = Toornament('data', 'toornament.token', 'Teams.csv', 'Stages.csv', enableAPI = True)
 
 	# Reads Discord bot token from token file
 	try:
@@ -43,7 +43,6 @@ def main():
 	        url = toornament.getStageURL(stage),
 	        colour = stage.colour
 	    )
-
 	    embed.set_thumbnail(url = stage.logoURL)
 	    embed.set_footer(text = toornament.tournamentName, icon_url = 'https://i.imgur.com/u2HPdEi.png')
 

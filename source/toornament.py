@@ -206,7 +206,7 @@ class Toornament:
         # Either reads ranking info from API or existing CSV file
         if self.enableAPI:
             requestURL = f'https://api.toornament.com/viewer/v2/tournaments/{self.tournamentID}/stages/{stage.id}/ranking-items'
-            if not groupID == '':
+            if not stage.groupID == '':
                 requestURL += f'?group_ids={stage.groupID}'
 
             response = requests.get(url = requestURL, headers = self.headers)
@@ -279,7 +279,7 @@ class Toornament:
         # Either reads match data from toornament API or manually reported CSV file
         if self.enableAPI:
             requestURL = f'https://api.toornament.com/viewer/v2/tournaments/{self.tournamentID}/matches?round_numbers={week}&stage_ids={stage.id}'
-            if not groupID == '':
+            if not stage.groupID == '':
                 requestURL += f'&group_ids={stage.groupID}'
 
             response = requests.get(url = requestURL, headers = self.headers)
