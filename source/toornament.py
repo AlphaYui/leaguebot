@@ -370,6 +370,8 @@ class Toornament:
                 nextMatch.pending = False
                 nextMatch.homeScore = homeTeam['score']
                 nextMatch.awayScore = awayTeam['score']
+                nextMatch.homeForfeit = homeTeam['forfeit']
+                nextMatch.awayForfeit = awayTeam['forfeit']
 
             matches += [nextMatch]
         
@@ -539,12 +541,26 @@ class Match:
         self.homeScore = homeScore,
         self.awayScore = awayScore,
         self.pending = pending
+        self.homeForfeit = False
+        self.awayForfeit = False
 
     # Converts match information to a string containing the team names and emotes
     def toString(self):
         if self.pending:
             return f"{self.homeTeamName} {self.homeTeamEmote} vs {self.awayTeamEmote} {self.awayTeamName}"
         else:
+            if self.homeScore is None or self.awayScore is None:
+                if self.homeForfeit:
+                    self.homeScore = 'FF'
+
+                    if self.awayForfeit:
+                        self.awayScore = 'FF'
+                    else:
+                        self.awayScore = 'W'
+                else:
+                    self.homeScore = 'W'
+                    self.awayScore = 'FF'
+
             return f"{self.homeTeamName} {self.homeTeamEmote} {self.homeScore}-{self.awayScore} {self.awayTeamEmote} {self.awayTeamName}"
     
     # Writes match details to CSV for serialization
